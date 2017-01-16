@@ -1,5 +1,3 @@
-# aws-formula
-
 
 =====
 aws-formula
@@ -185,7 +183,11 @@ Routing tables will create the tables, add routes, and assign subnets to routing
 
 ``vpc:security_groups``
 ---------
-Create security groups and rules.  If a single port is being specified, the `from_port` and `to port` can be replace with just `port`.  source_group_name and cidr_ip can be either a single item or a list.  Use `port: -1` to specify all ports
+Create security groups and rules.  Usage notes:
+- If a single port is being specified, the `from_port` and `to port` can be replace with just `port`.
+- source_group_name and cidr_ip can be either a single item or a list.
+- Use `port: -1` to specify all ports
+- A rules pillar name is for information purposes only and is not used in the actual rule creation.s
 
 ```yaml
   vpc:
