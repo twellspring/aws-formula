@@ -1,0 +1,31 @@
+# turn rules pillar into state rules
+{%- macro secgroup_rules(type, rules) -%}
+  {%- if rules %}
+    - {{ type }}:
+    {%- for rule_name, rule_data in rules.items() %}
+        - ip_protocol: {{ rule_data.ip_protocol }}
+          from_port: {{ rule_data.get('from_port', rule_data.get('port') ) }}
+          to_port: {{ rule_data.get('to_port' , rule_data.get('port') ) }}
+        {%- if rule_data.get('cidr_ip', False) %}
+          {%- if rule_data.cidr_ip is not string %}
+          cidr_ip:
+            {%- for ip in rule_data.cidr_ip %}
+            - {{ ip }}
+            {%- endfor %}
+          {%- else %}
+          cidr_ip: {{ rule_data.cidr_ip }}
+          {%- endif %}
+        {%- endif %}
+        {%- if rule_data.get('source_group_name', False) %}
+          {%- if rule_data.source_group_name is not string %}
+          source_group_name:
+            {%- for sgn in rule_data.source_group_name %}
+            - {{ sgn }}
+            {%- endfor %}
+          {%- else %}
+          source_group_name: {{ rule_data.source_group_name }}
+          {%- endif %}
+        {%- endif %}
+    {%- endfor %}
+  {%- endif %}
+{%- endmacro %}
