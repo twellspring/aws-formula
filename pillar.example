@@ -1,0 +1,237 @@
+# This example creates a 3 tiered (web, app, db) VPC spanning 3 Avalability Zones.
+# web tier has public IPs and app/db tier are internal and use a NAT Gateway for internet access.
+#
+# Using Jinja to set a few variables to cause repeated hard-coding of values in the pillar
+
+# Global CIDR for all your VPCs.  Use this for Security Group rules
+{% set cidr_global = '10.0.0.0/8' %}
+
+aws:
+  region:
+    us-east-2:
+      keys:
+        mykey: 'ssh-rsa XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX admin@mycompany.com'
+      profile:
+        region: us-east-2
+        keyid: ASDFASDFASDFASDFASDF
+        key: AB12Cd3Efg45hIjk67lMNop8q9RST0uvwXyz
+      vpc:
+        # Set VPC specific variables at the top of each pillar.
+        # settting vpc_name so that Security Groups names can include the VPC name
+        {%- set vpc_name = 'vpcProdEast2' %}
+        # setting cidr_local for use in secuirty group rules
+        {%- set cidr_local = '10.20.0.0/16' %}
+        {{ vpc_name }}:
+          cidr_prefix: '10.20'
+          vpc:
+            name: {{ vpc_name }}
+            cidr_block: '{{ cidr_local }}'
+            instance_tenancy: default
+            dns_support: 'true'
+            dns_hostnames: 'true'
+          # Can only have one internet_gateway
+          internet_gateway:
+            name: internet_gateway
+          subnets:
+            # web subnets are 1,2,3
+            1:
+              name: subWebA
+              az: a
+              nat_gateway: true
+            2:
+              name: subWebB
+              az: b
+              nat_gateway: true
+            3:
+              name: subWebC
+              az: c
+              nat_gateway: true
+            # app subnets are 11,12,13
+            11:
+              name: subAppA
+              az: a
+            12:
+              name: subAppB
+              az: b
+            13:
+              name: subAppC
+              az: c
+            # db subnets are 21, 22, 23
+            21:
+              name: subDbA
+              az: a
+            22:
+              name: subDbB
+              az: b
+            23:
+              name: subDbC
+              az: c
+          # These will be added to every table
+          # get the instance ID of the VPN server to connect to the 10.10 region
+          # VPC and put here, then uncomment below
+          # routing_tables_global:
+          #   vpnPROD:
+          #     destination_cidr_block: '10.10.0.0/16'
+          #     instance_id: i-xxxxxxxxxxxxxx
+          routing_tables:
+            # Create a public routing table for web subnet in each AZ per best practices
+            publicA:
+              routes:
+                default:
+                  destination_cidr_block: '0.0.0.0/0'
+                  internet_gateway_name: internet_gateway
+              subnet_names:
+                - subWebA
+            publicB:
+              routes:
+                default:
+                  destination_cidr_block: '0.0.0.0/0'
+                  internet_gateway_name: internet_gateway
+              subnet_names:
+                - subWebB
+            publicC:
+              routes:
+                default:
+                  destination_cidr_block: '0.0.0.0/0'
+                  internet_gateway_name: internet_gateway
+              subnet_names:
+                - subWebC
+            # Create a private routing table for App and DB subnets in each AZ
+            privateA:
+              # Update nat_gateway_id below from AWS Console.
+              #  VPC/NAT Gateways.  Use private IP to determine correct one.
+              # then incomment below lines
+              # routes:
+              #   default:
+              #     destination_cidr_block: '0.0.0.0/0'
+              #     nat_gateway_id: 'nat-xxxxxxxxxxxxxx'
+              subnet_names:
+                - subAppA
+                - subDbA
+            privateB:
+              # Update nat_gateway_id below from AWS Console.
+              #  VPC/NAT Gateways.  Use private IP to determine correct one.
+              # then incomment below lines
+              # routes:
+              #   default:
+              #     destination_cidr_block: '0.0.0.0/0'
+              #     nat_gateway_id: 'nat-xxxxxxxxxxxxxx'
+              subnet_names:
+                - subAppB
+                - subDbB
+            privateC:
+              # Update nat_gateway_id below from AWS Console.
+              #  VPC/NAT Gateways.  Use private IP to determine correct one.
+              # then incomment below lines
+              # routes:
+              #   default:
+              #     destination_cidr_block: '0.0.0.0/0'
+              #     nat_gateway_id: 'nat-xxxxxxxxxxxxxx'
+              subnet_names:
+                - subAppC
+                - subDbC
+          security_groups:
+            # Create a baseline security group with rules that apply to all servers
+            # All security groups includ theVPC name in case these security group
+            #  names are used in another vpc via vpc peering
+            sgBase-{{ vpc_name }}:
+              description: Base SG for all servers
+              rules:
+                ssh:
+                  ip_protocol: tcp
+                  port: 22
+                  cidr_ip: '{{ cidr_global }}'
+                icmp:
+                  ip_protocol: icmp
+                  port: -1
+                  cidr_ip: '{{ cidr_global }}'
+              rules_egress:
+                all:
+                  ip_protocol: all
+                  port: -1
+                  cidr_ip: '0.0.0.0/0'
+            # Web servers can access app servers.
+            # App servers can access other app servers.
+            sgApp-{{ vpc_name }}:
+              description: SG for all App servers
+              rules:
+                http:
+                  ip_protocol: tcp
+                  port: 80
+                  source_group_name:
+                    - sgWeb-{{ vpc_name }}
+                    - sgApp-{{ vpc_name }}
+                https:
+                  ip_protocol: tcp
+                  port: 443
+                  source_group_name:
+                    - sgWeb-{{ vpc_name }}
+                    - sgApp-{{ vpc_name }}
+            # App servers can access DB servers
+            # DB servers can access other DB servers ( for replication to slaves )
+            sgDB-{{ vpc_name }}:
+              description: SG for all DB servers
+              rules:
+                mysql:
+                  ip_protocol: tcp
+                  port: 3306
+                  source_group_name:
+                    - sgApp-{{ vpc_name }}
+                    - sgDB-{{ vpc_name }}
+            # Allow openVPN users access
+            sgOpenVPN-{{ vpc_name }}:
+              description: SG for all OpenVPN servers
+              rules:
+                openVPN_tcp:
+                  ip_protocol: tcp
+                  port: 1194
+                  cidr_ip: '0.0.0.0/0'
+                openVPN_udp:
+                  ip_protocol: udp
+                  port: 1194
+                  cidr_ip: '0.0.0.0/0'
+            # All servers can talk to the salt server
+            sgSalt-{{ vpc_name }}:
+              description: SG for all Salt servers
+              rules:
+                salt-master:
+                  ip_protocol: tcp
+                  from_port: 4505
+                  to_port: 4506
+                  cidr_ip: '{{ cidr_local }}'
+                salt-api:
+                  ip_protocol: tcp
+                  port: 443
+                  cidr_ip: '{{ cidr_local }}'
+            # Ipsec VPN servers can communicate across the internet
+            sgVPN-{{ vpc_name }}:
+              description: SG for all IPSec VPN servers
+              rules:
+                vpn_ike:
+                  ip_protocol: udp
+                  port: 500
+                  cidr_ip: '0.0.0.0/0'
+                vpn_ipsec_nat_tcp:
+                  ip_protocol: udp
+                  port: 4500
+                  cidr_ip: '0.0.0.0/0'
+                vpn_ipsec_nat_udp:
+                  ip_protocol: tcp
+                  port: 4500
+                  cidr_ip: '0.0.0.0/0'
+                vpn_l2tp:
+                  ip_protocol: udp
+                  port: 1701
+                  cidr_ip: '0.0.0.0/0'
+            # Internet can access web servers
+            sgWeb-{{ vpc_name }}:
+              description: SG for all Web servers
+              rules:
+                http:
+                  ip_protocol: tcp
+                  port: 80
+                  cidr_ip: '0.0.0.0/0'
+                https:
+                  ip_protocol: tcp
+                  port: 443
+                  cidr_ip: '0.0.0.0/0'

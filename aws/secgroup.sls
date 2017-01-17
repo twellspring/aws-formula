@@ -1,11 +1,13 @@
 {%- from "states/aws/macros.jinja" import secgroup_rules with context %}
 
+# Loop through regions
 {%- for region_name, region_data in salt['pillar.get']('aws:region', {}).items() %}
   {%- set profile = region_data.get('profile')  %}
 
+# Loop through VPCs
   {%- for vpc_name, vpc_data in region_data.get('vpc').items() %}
 
-# Security Groups
+# Create Security Groups
     {%- for sg_name, sg_data in vpc_data.get('security_groups', {}).items() %}
 aws_vpc_{{ vpc_name }}_create_security_group_{{ sg_name }}:
   boto_secgroup.present:

@@ -1,9 +1,9 @@
-
-=====
 aws-formula
-=====
+============
 
-Configures the non-server parts of an AWS datacenter without using CloudFormation.  Can configure one or more VPCs in the same or different regions
+Configure the non-server parts of an AWS datacenter without using CloudFormation.  Multiple VPCs in multiple regions can be configured with one pillar.
+
+**Requires**: Saltstack 2016.11 ( 2015.8.2 if not using NAT Gateway ) and Boto3
 
 .. note::
 
@@ -32,65 +32,74 @@ Create VPC objects, including:
 
 Create ec2 components including:
 
-- Keys
+- Key pairs
 
 ``secgroups``
 ----------------
 
-Create Security Groups
+Create and update Security Groups rules.  Servers must be added to the Security Groups as part of the salt-cloud creation proces.
 
 Limitations and Workarounds
 ==================================
 
-The salt boto states used in this formula have some limitations that do not allow for the full creation of a VPC datacenter.   The current issues are:
+The salt boto states used in this formula have some limitations that do not allow for the one pass full creation of a VPC datacenter.   The current issues are:
 
-- NAT Gateways can not be added to a routing table by name
+- NAT Gateways can not be added to a routing table by name. ( Found the undocumented nat_gateway_subnet_name option that would resolve this issue, but it is not working per `#38791<https://github.com/saltstack/salt/issues/38791>`_.)
+- Inter-Region VPN connections can not be added to routing table
 
 **NAT Gateway Workaround**
 
-The workaround for the nat gateway is to do an initial salt state run to create the gateways, then add the NAT Gateway's interface_id to the routing tables in the pillar and re-run the state.  In the sample pillar the default Gateways are commented out to indicate where the NAT Gateway interface_id should go.
+The workaround for the nat gateway is to do an initial salt state run to create the gateways, then add the NAT Gateway's nat_gateway_id to the routing tables in the pillar and re-run the state.  In the sample pillar the default Gateways are commented out to indicate where the nat_gateway_id should go.
+
+**Inter-Region VPN**
+
+AWS currently does not offer a service for VPC peering between regions.  This means the recommended solution is to create a VPN instance and then use an ipsec VPN tunnel between regions.  Unfortunately, when using VPN instances you can not use the **Route Propagation** functionality, so those routes have to be manually added to all routing tables for a VPC.  VPN routing is shown commented out in the pillar example.  Like above, run the states once to create all of the objects. Then when the VPN tunnel is created/active, add the IPs to the pillar and rerun the states.
 
 
 Configuration
 =================
 
-All configuration is done through the AWS pillar. The below examples and the sample pillar uses single quotes in many places to ensure data is interepreted correctly.  Not using quotes per the examples is done at your own risk.
-
-The pillar hierarchy is:
+All configuration is done through the AWS pillar. The hierarchy of this pillar is:
 
 .. code-block:: yaml
-aws:
-  region:
-    us-east-2:
-      keys:
-      profile:
-      vpc:
-        myvpc:
-          vpc:
-          internet_gateway:
-          subnets:
-          routing_tables:
-          security_groups:
 
-Section Descriptions and Examples
------------------------------------
+  aws:
+    region:
+      us-east-2:
+        key_pairs:
+        profile:
+        vpc:
+          myvpc:
+            vpc:
+            internet_gateway:
+            subnets:
+            routing_tables:
+            routing_global_routes:
+            security_groups:
+
+In this hierarchy, the 3rd level ( us-east-2 ) is a region name and the 5th level ( myvpc ) is a vpc name.  These are the names that will be used for the region and the name of the VPC.  All items besides internet_gateway can have multiple values.
+
+The below examples and the sample pillar uses single quotes in many places to ensure data is interepreted correctly.  Not using quotes per the examples is done at your own risk.
 
 .. contents::
     :local:
 
-``keys``
+
+``key_pairs``
 ---------
-Keys are included under at the region level since they are not generally VPC specific.  Key format is a key pair with the name and RSA key.
+Key pairs are included under at the region level since they are not generally VPC specific.  Key pair format is a key pair with the name and RSA publi key.
 
 .. code-block:: yaml
-  keys:
+
+  key_pairs:
     mykey: 'ssh-rsa XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX admin@mycompany.com'
 
 ``profile``
 ------------
-This formula uses an AWS profile for all states instead of the individual fields. The key and keyid should be gpg encrypted using the [salt gpg renderer](https://docs.saltstack.com/en/latest/ref/renderers/all/salt.renderers.gpg.html).  Example below shows it in unencrypted format.
+This formula uses an AWS profile for all states instead of the individual fields. The key and keyid should be gpg encrypted using the `Saltstack gpg renderer <https://docs.saltstack.com/en/latest/ref/renderers/all/salt.renderers.gpg.html>`_.  Example below shows it in unencrypted format.
 
 .. code-block:: yaml
+
   profile:
     region: us-east-2
     keyid: ASDFASDFASDFASDFASDF
@@ -99,9 +108,10 @@ This formula uses an AWS profile for all states instead of the individual fields
 
 ``vpc``
 ------------
-VPC contains vpcs for a given region. Each vpc will have data for all VPC specific states, even if they are not in the vpc.sls.  The vpc pillar name is the name that will be used for the VPC in AWS.  The only data directly under the vpc name is the CIDR block for the VPC
+VPC contains vpcs for a given region. Each vpc will have data for all VPC specific states, even if they are not in the vpc.sls.  The vpc pillar name is the name that will be used for the VPC in AWS.  The only data directly under the vpc name is the CIDR block for the VPC.  This Formula is designed using a class B network for the VPC and class C for all subnets.
 
 .. code-block:: yaml
+
   vpc:
     myvpc:
       cidr_prefix: '10.10'
@@ -111,6 +121,7 @@ VPC contains vpcs for a given region. Each vpc will have data for all VPC specif
 the VPC subsection contains the data needed to create the VPC.  The names on the left are the configuration item names from the boto_vpc.present states. The vpc pillar name should always match the name in the vpc section beneath.  The cidr_block should start with the same two octets as the cidr_prefix above.
 
 .. code-block:: yaml
+
   vpc:
     myvpc:
       vpc:
@@ -125,6 +136,7 @@ the VPC subsection contains the data needed to create the VPC.  The names on the
 An internet gateway is needed for most use cases.
 
 .. code-block:: yaml
+
   vpc:
     myvpc:
       internet_gateway:
@@ -136,6 +148,7 @@ An internet gateway is needed for most use cases.
 Subnets are named by their subnet ID ( assumes we are using class C subnets). The subnet ID will be appended to the cidr_prefix above to create the CIDR or the subnet. Every subnet has to at least have a subnet name and availability zone.  if nat_gateway is specified, then a NAT Gateway will be created in that subnet.  Subnet associations are done in the Routing Table section below.
 
 .. code-block:: yaml
+
   vpc:
     myvpc:
       subnets:
@@ -159,6 +172,7 @@ Both are in Availability Zone A and a NAT Gateway would be created in subWebA.
 Routing tables will create the tables, add routes, and assign subnets to routing tables.  The below example include the interface_id of a already created NAT Gateway.
 
 .. code-block:: yaml
+
   vpc:
     myvpc:
       routig_tables:
@@ -173,10 +187,22 @@ Routing tables will create the tables, add routes, and assign subnets to routing
           routes:
             default:
               destination_cidr_block: 0.0.0.0/0
-              interface_id: eni-5d6b5e34
+              nat_gateway_id: 'nat-0abcdef123546ghi'
           subnet_names:
             - subAppA
 
+``vpc:routing_global_routes``
+------------------------------
+Routes that will be added to all routing tables.  Use this for adding vpn routes.
+
+.. code-block:: yaml
+
+  vpc:
+    myvpc:
+      routing_global_routes:
+        vpnPROD:
+          destination_cidr_block: '10.10.0.0/16'
+          instance_id: 'i-xxxxxxxxxxxxxxx'
 
 ``vpc:security_groups``
 ---------------------------
@@ -188,6 +214,7 @@ Create security groups and rules.  Usage notes:
 - A rules pillar name is for information purposes only and is not used in the actual rule creation.s
 
 .. code-block:: yaml
+
   vpc:
     myvpc:
       security_groups:

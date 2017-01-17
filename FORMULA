@@ -1,0 +1,8 @@
+name: aws
+os: RedHat, Debian, Ubuntu, Suse, FreeBSD, Gentoo
+os_family: RedHat, Debian, Suse, FreeBSD, Gentoo
+version: 201701
+release: 1
+minimum_version: 2016.11
+summary: Formula for creating AWS datacenters
+description: Formula for creating multiple VPC AWS configurations without using CloudFormation

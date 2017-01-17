@@ -1,4 +1,4 @@
-# turn rules pillar into state rules
+# Optionally create ingress and egress securigy group rules
 {%- macro secgroup_rules(type, rules) -%}
   {%- if rules %}
     - {{ type }}:
