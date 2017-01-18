@@ -44,7 +44,8 @@ Limitations and Workarounds
 
 The salt boto states used in this formula have some limitations that do not allow for the one pass full creation of a VPC datacenter.   The current issues are:
 
-- NAT Gateways can not be added to a routing table by name. ( Found the undocumented nat_gateway_subnet_name option that would resolve this issue, but it is not working per `#38791<https://github.com/saltstack/salt/issues/38791>`_.)
+- NAT Gateways can not be added to a routing table by name. ( Found the undocumented nat_gateway_subnet_name option that would resolve this issue, but it is not working per `Salt Issue 38791 <https://github.com/saltstack/salt/issues/38791>`_. )
+
 - Inter-Region VPN connections can not be added to routing table
 
 **NAT Gateway Workaround**
