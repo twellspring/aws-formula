@@ -87,8 +87,8 @@ The below examples and the sample pillar uses single quotes in many places to en
 
 
 ``key_pairs``
----------
-Key pairs are included under at the region level since they are not generally VPC specific.  Key pair format is a key pair with the name and RSA publi key.
+-------------
+Key pairs are included under at the region level since they are not generally VPC specific.  Key pair format is a key pair with the name and RSA public key.
 
 .. code-block:: yaml
 
