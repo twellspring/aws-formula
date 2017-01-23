@@ -1,4 +1,4 @@
-# Optionally create ingress and egress securigy group rules
+# Optionally create ingress and egress security group rules
 {%- macro secgroup_rules(type, rules) -%}
   {%- if rules %}
     - {{ type }}:
