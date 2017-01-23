@@ -2,6 +2,13 @@
 aws-formula
 =============
 
+0.1.1
+-----
+
+- Fixed the NAT Gateway so it no longer requires a workaround
+- Object names from pillar have the vpc name appended for uniqueness
+- "Object names must be unique" workaround added
+- "Security Group rule creation failure" workaround added
 
 0.1.0
 -----
