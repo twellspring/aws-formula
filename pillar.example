@@ -17,7 +17,7 @@ aws:
         key: AB12Cd3Efg45hIjk67lMNop8q9RST0uvwXyz
       vpc:
         # Set VPC specific variables at the top of each pillar.
-        # settting vpc_name so that Security Groups names can include the VPC name
+        # setting vpc_name so that Security Groups names can include the VPC name
         {%- set vpc_name = 'vpcProdEast2' %}
         # Set cidr_local for use in secuirty group rules.
         # make sure it is consistent with the cidr_prefix 2 lines below
@@ -123,8 +123,8 @@ aws:
                 - subAppC
                 - subDbC
           security_groups:
-            # Create a baseline security group with rules that apply to all servers
-            # All security groups includ theVPC name in case these security group
+            # Create a baseline security group with rules that apply to all servers.
+            # All security groups include the VPC name in case these security group
             #  names are used in another vpc via vpc peering
             sgBase-{{ vpc_name }}:
               description: Base SG for all servers
