@@ -1,5 +1,5 @@
 # Optionally create ingress and egress security group rules
-{%- macro secgroup_rules(type, rules) -%}
+{%- macro secgroup_rules(type, rules, vpc_name ) -%}
   {%- if rules %}
     - {{ type }}:
     {%- for rule_name, rule_data in rules.items() %}
@@ -20,10 +20,10 @@
           {%- if rule_data.source_group_name is not string %}
           source_group_name:
             {%- for sgn in rule_data.source_group_name %}
-            - {{ sgn }}
+            - {{ sgn }}-{{ vpc_name }}
             {%- endfor %}
           {%- else %}
-          source_group_name: {{ rule_data.source_group_name }}
+          source_group_name: {{ rule_data.source_group_name }}-{{ vpc_name }}
           {%- endif %}
         {%- endif %}
     {%- endfor %}
