@@ -2,6 +2,11 @@
 aws-formula
 =============
 
+0.1.2
+-----
+
+- Remove un-used include from init.sls
+
 0.1.1
 -----
 
@@ -14,4 +19,3 @@ aws-formula
 -----
 
 - Create a functional VPC with workarounds for VPN and NAT Gateways
-
