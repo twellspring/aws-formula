@@ -42,19 +42,23 @@ Create and update Security Groups rules.  Servers must be added to the Security 
 Limitations and Workarounds
 ==================================
 
-The salt boto states used in this formula have some limitations that do not allow for the one pass full creation of a VPC datacenter.   The current issues are:
+The salt boto states used in this formula have some limitations that require workarounds for the formula to work.  These are:
 
-- NAT Gateways can not be added to a routing table by name. ( Found the undocumented nat_gateway_subnet_name option that would resolve this issue, but it is not working per `Salt Issue 38791 <https://github.com/saltstack/salt/issues/38791>`_. )
-
+- Many object names must be unique.
 - Inter-Region VPN connections can not be added to routing table
+- Security Group rule creation can fail when when referencing other groups
 
-**NAT Gateway Workaround**
+**Object names must be unique**
 
-The workaround for the nat gateway is to do an initial salt state run to create the gateways, then add the NAT Gateway's nat_gateway_id to the routing tables in the pillar and re-run the state.  In the sample pillar the default Gateways are commented out to indicate where the nat_gateway_id should go.
+The saltstack states/modules do a check if the resource exists before creating it.  This lookup is not VPC specific, so will match on objects of the same name in different VPCs.  If only one VPC is created in a region, this is not a problem, but if multiple are created it will cause some of the required resources to not be created. The workaround is most objects will have the VPC name appended as a suffix ( example:  subAppA in the pillar will have -myVPC appended to become subAppA-myVPC )
 
 **Inter-Region VPN**
 
 AWS currently does not offer a service for VPC peering between regions.  This means the recommended solution is to create a VPN instance and then use an ipsec VPN tunnel between regions.  Unfortunately, when using VPN instances you can not use the **Route Propagation** functionality, so those routes have to be manually added to all routing tables for a VPC.  VPN routing is shown commented out in the pillar example.  Like above, run the states once to create all of the objects. Then when the VPN tunnel is created/active, add the IPs to the pillar and rerun the states.
+
+**Security Group rule creation failure**
+
+Security Group rules will sometimes include references to other Security Groups.  But the oder Groups are Created is indeterminate ( not alphabetical or pillar order ).  So sometimes a Security Group creation will fail because it is being created before the group it references.  Re-running the formula to create these failed security groups.
 
 
 Configuration
@@ -87,8 +91,8 @@ The below examples and the sample pillar uses single quotes in many places to en
 
 
 ``key_pairs``
----------
-Key pairs are included under at the region level since they are not generally VPC specific.  Key pair format is a key pair with the name and RSA publi key.
+-------------
+Key pairs are included under at the region level since they are not generally VPC specific.  Key pair format is a key pair with the name and RSA public key.
 
 .. code-block:: yaml
 
@@ -170,7 +174,7 @@ Both are in Availability Zone A and a NAT Gateway would be created in subWebA.
 
 ``vpc:routing_tables``
 ------------------------------
-Routing tables will create the tables, add routes, and assign subnets to routing tables.  The below example include the interface_id of a already created NAT Gateway.
+Routing tables will create the tables, add routes, and assign subnets to routing tables.  The below example uses a subnet name that has a NAT Gateway to assocate that NAT Gateway with the routing table.
 
 .. code-block:: yaml
 
@@ -188,7 +192,7 @@ Routing tables will create the tables, add routes, and assign subnets to routing
           routes:
             default:
               destination_cidr_block: 0.0.0.0/0
-              nat_gateway_id: 'nat-0abcdef123546ghi'
+              nat_gateway_subnet_name: subWebA
           subnet_names:
             - subAppA
 
@@ -219,7 +223,7 @@ Create security groups and rules.  Usage notes:
   vpc:
     myvpc:
       security_groups:
-        sgApp-myvpc:
+        sgApp:
           description: SG for all App servers
           rules:
             http:
@@ -233,7 +237,7 @@ Create security groups and rules.  Usage notes:
               ip_protocol: all
               port: -1
               cidr_ip: '0.0.0.0/0'
-        sgSalt-myvpc:
+        sgSalt:
           description: SG for all Salt servers
           rules:
             salt-master:

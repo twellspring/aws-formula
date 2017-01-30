@@ -1,7 +1,8 @@
+# Loop through regions
 {%- for region_name, region_data in salt['pillar.get']('aws:region', {}).items() %}
   {%- set profile = region_data.get('profile') %}
 
-# SSH Keys
+# Create Key pairs
   {%- for key_name, key_value in region_data.get('key_pairs', {} ).items() %}
 aws_region_{{ region_name }}_default_keypair_{{ key_name }}:
   boto_ec2.key_present:

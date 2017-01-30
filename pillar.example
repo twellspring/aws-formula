@@ -17,9 +17,10 @@ aws:
         key: AB12Cd3Efg45hIjk67lMNop8q9RST0uvwXyz
       vpc:
         # Set VPC specific variables at the top of each pillar.
-        # settting vpc_name so that Security Groups names can include the VPC name
+        # setting vpc_name so that Security Groups names can include the VPC name
         {%- set vpc_name = 'vpcProdEast2' %}
-        # setting cidr_local for use in secuirty group rules
+        # Set cidr_local for use in secuirty group rules.
+        # make sure it is consistent with the cidr_prefix 2 lines below
         {%- set cidr_local = '10.20.0.0/16' %}
         {{ vpc_name }}:
           cidr_prefix: '10.20'
@@ -98,41 +99,32 @@ aws:
                 - subWebC
             # Create a private routing table for App and DB subnets in each AZ
             privateA:
-              # Update nat_gateway_id below from AWS Console.
-              #  VPC/NAT Gateways.  Use private IP to determine correct one.
-              # then incomment below lines
-              # routes:
-              #   default:
-              #     destination_cidr_block: '0.0.0.0/0'
-              #     nat_gateway_id: 'nat-xxxxxxxxxxxxxx'
+              routes:
+                default:
+                  destination_cidr_block: '0.0.0.0/0'
+                  nat_gateway_subnet_name: subWebA
               subnet_names:
                 - subAppA
                 - subDbA
             privateB:
-              # Update nat_gateway_id below from AWS Console.
-              #  VPC/NAT Gateways.  Use private IP to determine correct one.
-              # then incomment below lines
-              # routes:
-              #   default:
-              #     destination_cidr_block: '0.0.0.0/0'
-              #     nat_gateway_id: 'nat-xxxxxxxxxxxxxx'
+              routes:
+                default:
+                  destination_cidr_block: '0.0.0.0/0'
+                  nat_gateway_subnet_name: subWebB
               subnet_names:
                 - subAppB
                 - subDbB
             privateC:
-              # Update nat_gateway_id below from AWS Console.
-              #  VPC/NAT Gateways.  Use private IP to determine correct one.
-              # then incomment below lines
-              # routes:
-              #   default:
-              #     destination_cidr_block: '0.0.0.0/0'
-              #     nat_gateway_id: 'nat-xxxxxxxxxxxxxx'
+              routes:
+                default:
+                  destination_cidr_block: '0.0.0.0/0'
+                  nat_gateway_subnet_name: subWebC
               subnet_names:
                 - subAppC
                 - subDbC
           security_groups:
-            # Create a baseline security group with rules that apply to all servers
-            # All security groups includ theVPC name in case these security group
+            # Create a baseline security group with rules that apply to all servers.
+            # All security groups include the VPC name in case these security group
             #  names are used in another vpc via vpc peering
             sgBase-{{ vpc_name }}:
               description: Base SG for all servers
