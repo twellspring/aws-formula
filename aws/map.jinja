@@ -1,0 +1,23 @@
+# if command line vpc provided, only include pillar that matches
+{% set aws_data = {} %}
+{% set aws_pillar = salt['pillar.get']('aws', {}) %}
+{% set vpc_filter = salt['pillar.get']('vpc', false ) %}
+
+# Create subset of pillar if a VPC is specified on command line
+{% if vpc_filter %}
+  # Loop through regions
+  {%- for region_name, region_data in aws_pillar.get('region', {}).items() %}
+  # Loop through VPCs
+    {%- for vpc_name, vpc_data in region_data.get('vpc').items() %}
+      {% if vpc_name|string() == vpc_filter|string() %}
+        # Include region of matching VPC
+        {% do aws_data.update( { 'region': { region_name: region_data } } ) %}
+        # Clear VPCs and add just matching one
+        {% do aws_data['region'][region_name].update( { "vpc": {} }) %}
+        {% do aws_data['region'][region_name]['vpc'].update( { vpc_name: vpc_data } ) %}
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+{% else %}
+  {% set aws_data = aws_pillar %}
+{% endif %}

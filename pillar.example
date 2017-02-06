@@ -126,7 +126,7 @@ aws:
             # Create a baseline security group with rules that apply to all servers.
             # All security groups include the VPC name in case these security group
             #  names are used in another vpc via vpc peering
-            sgBase-{{ vpc_name }}:
+            sgBase:
               description: Base SG for all servers
               rules:
                 ssh:
@@ -144,7 +144,7 @@ aws:
                   cidr_ip: '0.0.0.0/0'
             # Web servers can access app servers.
             # App servers can access other app servers.
-            sgApp-{{ vpc_name }}:
+            sgApp:
               description: SG for all App servers
               rules:
                 http:
@@ -161,7 +161,7 @@ aws:
                     - sgApp-{{ vpc_name }}
             # App servers can access DB servers
             # DB servers can access other DB servers ( for replication to slaves )
-            sgDB-{{ vpc_name }}:
+            sgDB:
               description: SG for all DB servers
               rules:
                 mysql:
@@ -171,7 +171,7 @@ aws:
                     - sgApp-{{ vpc_name }}
                     - sgDB-{{ vpc_name }}
             # Allow openVPN users access
-            sgOpenVPN-{{ vpc_name }}:
+            sgOpenVPN:
               description: SG for all OpenVPN servers
               rules:
                 openVPN_tcp:
@@ -183,7 +183,7 @@ aws:
                   port: 1194
                   cidr_ip: '0.0.0.0/0'
             # All servers can talk to the salt server
-            sgSalt-{{ vpc_name }}:
+            sgSalt:
               description: SG for all Salt servers
               rules:
                 salt-master:
@@ -196,7 +196,7 @@ aws:
                   port: 443
                   cidr_ip: '{{ cidr_local }}'
             # Ipsec VPN servers can communicate across the internet
-            sgVPN-{{ vpc_name }}:
+            sgVPN:
               description: SG for all IPSec VPN servers
               rules:
                 vpn_ike:
@@ -216,7 +216,7 @@ aws:
                   port: 1701
                   cidr_ip: '0.0.0.0/0'
             # Internet can access web servers
-            sgWeb-{{ vpc_name }}:
+            sgWeb:
               description: SG for all Web servers
               rules:
                 http:
@@ -227,3 +227,4 @@ aws:
                   ip_protocol: tcp
                   port: 443
                   cidr_ip: '0.0.0.0/0'
+          rds:

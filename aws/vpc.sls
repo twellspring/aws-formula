@@ -1,8 +1,10 @@
-# Create list of objects that need name to have -vpcname suffix
+# Create list of route table options that need the value to have a -vpcname suffix
 {% set rt_append_list = [ 'internet_gateway_name', 'nat_gateway_subnet_name'] %}
 
+{% from "aws/map.jinja" import aws_data with context %}
+
 # Loop through regions
-{%- for region_name, region_data in salt['pillar.get']('aws:region', {}).items() %}
+{%- for region_name, region_data in aws_data.get('region', {}).items() %}
   {%- set profile = region_data.get('profile')  %}
 
 # Loop through VPCs

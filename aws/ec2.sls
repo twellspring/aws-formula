@@ -1,5 +1,7 @@
+{% from "aws/map.jinja" import aws_data with context %}
+
 # Loop through regions
-{%- for region_name, region_data in salt['pillar.get']('aws:region', {}).items() %}
+{%- for region_name, region_data in aws_data.get('region', {}).items() %}
   {%- set profile = region_data.get('profile') %}
 
 # Create Key pairs
