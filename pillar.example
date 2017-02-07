@@ -196,7 +196,7 @@ aws:
                   port: 443
                   cidr_ip: '{{ cidr_local }}'
             # Ipsec VPN servers can communicate across the internet
-            sgVPN:
+            sgIPSecVPN:
               description: SG for all IPSec VPN servers
               rules:
                 vpn_ike:
@@ -227,4 +227,3 @@ aws:
                   ip_protocol: tcp
                   port: 443
                   cidr_ip: '0.0.0.0/0'
-          rds:

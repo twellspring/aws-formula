@@ -2,6 +2,12 @@
 aws-formula
 =============
 
+
+0.1.3
+-----
+
+- Limit states to a single VPC using command line pillar
+
 0.1.2
 -----
 

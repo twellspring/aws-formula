@@ -60,6 +60,15 @@ AWS currently does not offer a service for VPC peering between regions.  This me
 
 Security Group rules will sometimes include references to other Security Groups.  But the oder Groups are Created is indeterminate ( not alphabetical or pillar order ).  So sometimes a Security Group creation will fail because it is being created before the group it references.  Re-running the formula to create these failed security groups.
 
+VPC Selection
+=================
+By default the states for all VPCs defined in the aws pillar will be run.
+To limit states to a single VPC use the command line pillar
+
+.. code-block::
+
+  salt myserver state.apply pillar='{"vpc":"myvpc"}'
+
 
 Configuration
 =================
@@ -81,7 +90,6 @@ All configuration is done through the AWS pillar. The hierarchy of this pillar i
             routing_tables:
             routing_global_routes:
             security_groups:
-            rds:
 
 In this hierarchy, the 3rd level ( us-east-2 ) is a region name and the 5th level ( myvpc ) is a vpc name.  These are the names that will be used for the region and the name of the VPC.  All items besides internet_gateway can have multiple values.
 
@@ -252,52 +260,3 @@ Create security groups and rules.  Usage notes:
               cidr_ip:
                 - '10.10.0.0/16'
                 - '10.20.0.0/16'
-
-``vpc:rds``
----------------------------
-Create RDS instances.  Usage notes:
-
-- ?????
-
-.. code-block:: yaml
-
-  vpc:
-    myvpc:
-      rds:
-        subnet_groups:
-          subnet_group1:
-            description: Subnet Group 1
-            subnet_names:
-              - subDbA
-              - subDbB
-              - subDbC
-        parameter-groups:
-          myCompany_parameters:
-            description: MyCompany Parameter Group
-            db_paramater_group_family: mysql5.6
-            parameters:
-              - binlog_cache_size: 32768
-              - binlog_checksum: CRC32
-            apply_method:  pending-reboot
-
-        rds:
-          coreDB:
-            name: coreDB
-            allocated_storage: 5
-            storage_type: standard
-            db_instance_class: db.t2.micro
-            engine: MySQL
-            master_username: myuser
-            master_user_password: mypass
-            db_name:
-            vpc_security_group_ids:
-            availability_zone:
-            db_subnet_group:
-            preferred_maintenance_window:
-            db_parameter_group_name:
-            storage_encrypted:
-            kms_keyid:
-            backup_retention_period
-            preferred_backup_window
-            port: 3306
-            multi_az: true
