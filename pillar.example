@@ -17,9 +17,10 @@ aws:
         key: AB12Cd3Efg45hIjk67lMNop8q9RST0uvwXyz
       vpc:
         # Set VPC specific variables at the top of each pillar.
-        # settting vpc_name so that Security Groups names can include the VPC name
+        # setting vpc_name so that Security Groups names can include the VPC name
         {%- set vpc_name = 'vpcProdEast2' %}
-        # setting cidr_local for use in secuirty group rules
+        # Set cidr_local for use in secuirty group rules.
+        # make sure it is consistent with the cidr_prefix 2 lines below
         {%- set cidr_local = '10.20.0.0/16' %}
         {{ vpc_name }}:
           cidr_prefix: '10.20'
@@ -98,43 +99,34 @@ aws:
                 - subWebC
             # Create a private routing table for App and DB subnets in each AZ
             privateA:
-              # Update nat_gateway_id below from AWS Console.
-              #  VPC/NAT Gateways.  Use private IP to determine correct one.
-              # then incomment below lines
-              # routes:
-              #   default:
-              #     destination_cidr_block: '0.0.0.0/0'
-              #     nat_gateway_id: 'nat-xxxxxxxxxxxxxx'
+              routes:
+                default:
+                  destination_cidr_block: '0.0.0.0/0'
+                  nat_gateway_subnet_name: subWebA
               subnet_names:
                 - subAppA
                 - subDbA
             privateB:
-              # Update nat_gateway_id below from AWS Console.
-              #  VPC/NAT Gateways.  Use private IP to determine correct one.
-              # then incomment below lines
-              # routes:
-              #   default:
-              #     destination_cidr_block: '0.0.0.0/0'
-              #     nat_gateway_id: 'nat-xxxxxxxxxxxxxx'
+              routes:
+                default:
+                  destination_cidr_block: '0.0.0.0/0'
+                  nat_gateway_subnet_name: subWebB
               subnet_names:
                 - subAppB
                 - subDbB
             privateC:
-              # Update nat_gateway_id below from AWS Console.
-              #  VPC/NAT Gateways.  Use private IP to determine correct one.
-              # then incomment below lines
-              # routes:
-              #   default:
-              #     destination_cidr_block: '0.0.0.0/0'
-              #     nat_gateway_id: 'nat-xxxxxxxxxxxxxx'
+              routes:
+                default:
+                  destination_cidr_block: '0.0.0.0/0'
+                  nat_gateway_subnet_name: subWebC
               subnet_names:
                 - subAppC
                 - subDbC
           security_groups:
-            # Create a baseline security group with rules that apply to all servers
-            # All security groups includ theVPC name in case these security group
+            # Create a baseline security group with rules that apply to all servers.
+            # All security groups include the VPC name in case these security group
             #  names are used in another vpc via vpc peering
-            sgBase-{{ vpc_name }}:
+            sgBase:
               description: Base SG for all servers
               rules:
                 ssh:
@@ -152,7 +144,7 @@ aws:
                   cidr_ip: '0.0.0.0/0'
             # Web servers can access app servers.
             # App servers can access other app servers.
-            sgApp-{{ vpc_name }}:
+            sgApp:
               description: SG for all App servers
               rules:
                 http:
@@ -169,7 +161,7 @@ aws:
                     - sgApp-{{ vpc_name }}
             # App servers can access DB servers
             # DB servers can access other DB servers ( for replication to slaves )
-            sgDB-{{ vpc_name }}:
+            sgDB:
               description: SG for all DB servers
               rules:
                 mysql:
@@ -179,7 +171,7 @@ aws:
                     - sgApp-{{ vpc_name }}
                     - sgDB-{{ vpc_name }}
             # Allow openVPN users access
-            sgOpenVPN-{{ vpc_name }}:
+            sgOpenVPN:
               description: SG for all OpenVPN servers
               rules:
                 openVPN_tcp:
@@ -191,7 +183,7 @@ aws:
                   port: 1194
                   cidr_ip: '0.0.0.0/0'
             # All servers can talk to the salt server
-            sgSalt-{{ vpc_name }}:
+            sgSalt:
               description: SG for all Salt servers
               rules:
                 salt-master:
@@ -204,7 +196,7 @@ aws:
                   port: 443
                   cidr_ip: '{{ cidr_local }}'
             # Ipsec VPN servers can communicate across the internet
-            sgVPN-{{ vpc_name }}:
+            sgIPSecVPN:
               description: SG for all IPSec VPN servers
               rules:
                 vpn_ike:
@@ -224,7 +216,7 @@ aws:
                   port: 1701
                   cidr_ip: '0.0.0.0/0'
             # Internet can access web servers
-            sgWeb-{{ vpc_name }}:
+            sgWeb:
               description: SG for all Web servers
               rules:
                 http:
